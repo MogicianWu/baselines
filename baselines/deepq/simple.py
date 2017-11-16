@@ -237,7 +237,41 @@ def learn(env,
                 kwargs['reset'] = reset
                 kwargs['update_param_noise_threshold'] = update_param_noise_threshold
                 kwargs['update_param_noise_scale'] = True
-            action = act(np.array(obs)[None], update_eps=update_eps, **kwargs)[0]
+
+
+            import copy
+            explore = np.random.rand() < update_eps
+            if explore:
+                # for discrete action spaces only:
+                errors = np.zeros(env.action_space.n)
+                for action in range(env.action_space.n):
+                    env_copy = copy.deepcopy(env)
+
+                    #action = act(np.array(obs)[None], update_eps=float(explore), **kwargs)[0]
+                    #action = i
+                    if isinstance(env_copy.action_space, gym.spaces.MultiBinary):
+                        env_action = np.zeros(env_copy.action_space.n)
+                        env_action[action] = 1
+                    else:
+                        env_action = action
+                    reset = False
+                    new_obs, rew, done, _ = env_copy.step(env_action)
+                    td_error = train(np.array(obs)[None],
+                                     np.array(action)[None],
+                                     np.array(rew)[None],
+                                     np.array(new_obs)[None],
+                                     np.array(float(done))[None],
+                                     np.ones_like(np.array(rew)[None]))
+                    errors[action] = td_error[0]
+                    #if td_error[0] < -0.5:
+                    #    break
+                action = np.argmin(errors)
+
+                #action = act(np.array(obs)[None], update_eps=1.0, **kwargs)[0]
+            if not explore:
+                action = act(np.array(obs)[None], update_eps=0.0, **kwargs)[0]
+
+            #action = act(np.array(obs)[None], update_eps=update_eps, **kwargs)[0]
             if isinstance(env.action_space, gym.spaces.MultiBinary):
                 env_action = np.zeros(env.action_space.n)
                 env_action[action] = 1
@@ -245,10 +279,8 @@ def learn(env,
                 env_action = action
             reset = False
             new_obs, rew, done, _ = env.step(env_action)
-            # Store transition in the replay buffer.
             replay_buffer.add(obs, action, rew, new_obs, float(done))
             obs = new_obs
-
             episode_rewards[-1] += rew
             if done:
                 obs = env.reset()
