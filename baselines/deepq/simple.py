@@ -240,12 +240,15 @@ def learn(env,
 
 
             import copy
+            print(t)
             explore = np.random.rand() < update_eps
+            acts = [0,1,3,5,7]
             if explore:
                 # for discrete action spaces only:
                 errors = np.zeros(env.action_space.n)
-                for action in range(env.action_space.n):
-                    env_copy = copy.deepcopy(env)
+                env_copy = copy.deepcopy(env)
+                #for action in range(env.action_space):
+                for action in acts:
 
                     #action = act(np.array(obs)[None], update_eps=float(explore), **kwargs)[0]
                     #action = i
