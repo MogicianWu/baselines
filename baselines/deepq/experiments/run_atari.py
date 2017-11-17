@@ -17,7 +17,8 @@ def main():
     args = parser.parse_args()
     logger.configure()
     set_global_seeds(args.seed)
-    env = make_atari(args.env)
+    #env = make_atari(args.env)
+    env = gym.make(args.env)
     #env = bench.Monitor(env, logger.get_dir())
     #env = deepq.wrap_atari_dqn(env)
     model = deepq.models.cnn_to_mlp(

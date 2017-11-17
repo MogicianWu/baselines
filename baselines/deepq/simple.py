@@ -85,7 +85,7 @@ def learn(env,
           exploration_final_eps=0.02,
           train_freq=1,
           batch_size=32,
-          print_freq=100,
+          print_freq=10,
           checkpoint_freq=10000,
           learning_starts=1000,
           gamma=1.0,
@@ -240,39 +240,45 @@ def learn(env,
 
 
             import copy
-            print(t)
+            #print(t)
             explore = np.random.rand() < update_eps
-            acts = [0,1,3,5,7]
+            rollback = True
+            acts = [0,2,3,4,5]
+
             if explore:
                 # for discrete action spaces only:
-                errors = np.zeros(env.action_space.n)
-                env_copy = copy.deepcopy(env)
-                #for action in range(env.action_space):
-                for action in acts:
+                if rollback:
+                    errors = np.zeros(env.action_space.n)
+                    state = env.unwrapped.clone_full_state()
 
-                    #action = act(np.array(obs)[None], update_eps=float(explore), **kwargs)[0]
-                    #action = i
-                    if isinstance(env_copy.action_space, gym.spaces.MultiBinary):
-                        env_action = np.zeros(env_copy.action_space.n)
-                        env_action[action] = 1
-                    else:
-                        env_action = action
-                    reset = False
-                    new_obs, rew, done, _ = env_copy.step(env_action)
-                    td_error = train(np.array(obs)[None],
-                                     np.array(action)[None],
-                                     np.array(rew)[None],
-                                     np.array(new_obs)[None],
-                                     np.array(float(done))[None],
-                                     np.ones_like(np.array(rew)[None]))
-                    errors[action] = td_error[0]
-                    #if td_error[0] < -0.5:
-                    #    break
-                action = np.argmin(errors)
+                    #for action in range(env.action_space):
+                    for action in acts:
 
-                #action = act(np.array(obs)[None], update_eps=1.0, **kwargs)[0]
+                        #action = act(np.array(obs)[None], update_eps=float(explore), **kwargs)[0]
+                        #action = i
+                        if isinstance(env.action_space, gym.spaces.MultiBinary):
+                            env_action = np.zeros(env.action_space.n)
+                            env_action[action] = 1
+                        else:
+                            env_action = action
+                        reset = False
+                        new_obs, rew, done, _ = env.step(env_action)
+                        td_error = train(np.array(obs)[None],
+                                         np.array(action)[None],
+                                         np.array(rew)[None],
+                                         np.array(new_obs)[None],
+                                         np.array(float(done))[None],
+                                         np.ones_like(np.array(rew)[None]))
+                        errors[action] = td_error[0]
+                        #if td_error[0] < -0.5:
+                        #    break
+                        env.unwrapped.restore_full_state(state)
+                    action = np.argmin(errors)
+                else:
+                    action = act(np.array(obs)[None], update_eps=1.0, **kwargs)[0]
             if not explore:
                 action = act(np.array(obs)[None], update_eps=0.0, **kwargs)[0]
+
 
             #action = act(np.array(obs)[None], update_eps=update_eps, **kwargs)[0]
             if isinstance(env.action_space, gym.spaces.MultiBinary):
@@ -289,6 +295,8 @@ def learn(env,
                 obs = env.reset()
                 episode_rewards.append(0.0)
                 reset = True
+                print(t)
+                #print(len(episode_rewards))
 
             if t > learning_starts and t % train_freq == 0:
                 # Minimize the error in Bellman's equation on a batch sampled from replay buffer.
